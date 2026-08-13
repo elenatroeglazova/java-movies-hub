@@ -10,6 +10,7 @@ import ru.practicum.moviehub.store.MoviesStore;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.Collections;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 
@@ -28,7 +29,7 @@ public class MoviesHandler extends BaseHttpHandler {
         String method = ex.getRequestMethod();
         ex.getResponseHeaders().set("Content-Type", CT_JSON);
         if (method.equalsIgnoreCase("GET")) {
-            String moviesJson = gson.toJson(store);
+            String moviesJson = gson.toJson(store.values());
             sendJson(ex, 200, moviesJson);
         } else if (method.equalsIgnoreCase("POST")) {
             String respHeader = ex.getRequestHeaders().getFirst("Content-Type");
@@ -61,9 +62,9 @@ public class MoviesHandler extends BaseHttpHandler {
             }
 
             if (errResp.getDetails().isEmpty()) {
-                newMovie.setId();
-                store.add(newMovie);
-                sendJson(ex, 201, gson.toJson(newMovie));
+                store.put(store.size() + 1, newMovie);
+                sendJson(ex, 201, gson.toJson(
+                        Collections.singletonMap(store.lastEntry().getKey(), store.lastEntry().getValue())));
             } else {
                 sendJson(ex, 422, gson.toJson(errResp));
             }
