@@ -480,4 +480,88 @@ public class MoviesApiTest {
         assertEquals("Некорректный ID", errorResponse.getError(),
                 "В ответе должно быть сообщение об ошибке 'Некорректный ID'");
     }
+
+    @Test
+    void getMoviesByYear_whenEmpty_returnsEmptyArray() throws Exception {
+        Movie movie1 = new Movie("Оппенгеймер", 2023);
+        Movie movie2 = new Movie("Барби", 2023);
+        Movie movie3 = new Movie("Дюна: Часть вторая", 2023);
+        movies.put(1, movie1);
+        movies.put(2, movie2);
+        movies.put(3, movie3);
+
+        HttpRequest req = HttpRequest.newBuilder()
+                .uri(URI.create(BASE + "/movies?year=2021"))
+                .GET()
+                .build();
+
+        HttpResponse<String> resp = client.send(req, HttpResponse.BodyHandlers.ofString(UTF_8));
+
+        assertEquals(200, resp.statusCode(), "GET /movies?year=2021 должен вернуть 200");
+
+        String contentTypeHeaderValue = resp.headers().firstValue("Content-Type").orElse("");
+        assertEquals("application/json; charset=UTF-8", contentTypeHeaderValue,
+                "Content-Type должен содержать формат данных и кодировку");
+
+        String body = resp.body().trim();
+        assertEquals("[]", body, "Ожидается пустой JSON-массив");
+    }
+
+    @Test
+    void getMoviesByYear_whenNotEmpty_returnsArrayOfMovies() throws IOException, InterruptedException {
+        LinkedHashSet<Movie> expected = new LinkedHashSet<>();
+        Movie movie1 = new Movie("Оппенгеймер", 2023);
+        Movie movie2 = new Movie("Барби", 2023);
+        Movie movie3 = new Movie("Дюна: Часть вторая", 2023);
+        movies.put(1, movie1);
+        movies.put(2, movie2);
+        movies.put(3, movie3);
+
+        HttpRequest resReq = HttpRequest.newBuilder()
+                .uri(URI.create(BASE + "/movies?year=2023"))
+                .GET()
+                .build();
+
+        HttpResponse<String> resp = client.send(resReq, HttpResponse.BodyHandlers.ofString(UTF_8));
+
+        assertEquals(200, resp.statusCode(), "GET /movies?year=2023 должен вернуть 200");
+
+        String contentTypeHeaderValue = resp.headers().firstValue("Content-Type").orElse("");
+        assertEquals("application/json; charset=UTF-8", contentTypeHeaderValue,
+                "Content-Type должен содержать формат данных и кодировку");
+
+        String body = resp.body().trim();
+        expected.add(movie1);
+        expected.add(movie2);
+        expected.add(movie3);
+        String expectedJson = gson.toJson(expected);
+        assertEquals(expectedJson, body, "Ожидается JSON-массив, содержащий список фильмов");
+    }
+
+    @Test
+    void getMovieByYear_whenYearNotANumber_returnsBadRequestError() throws IOException, InterruptedException {
+        Movie movie1 = new Movie("Крестный отец", 1972);
+        Movie movie2 = new Movie("Дюна", 2021);
+        movies.put(1, movie1);
+        movies.put(2, movie2);
+
+        HttpRequest resReq = HttpRequest.newBuilder()
+                .uri(URI.create(BASE + "/movies?year=YYYY"))
+                .GET()
+                .build();
+
+        HttpResponse<String> resp = client.send(resReq, HttpResponse.BodyHandlers.ofString(UTF_8));
+
+        assertEquals(400, resp.statusCode(), "GET /movies?year=YYYY должен вернуть 400");
+
+        String contentTypeHeaderValue = resp.headers().firstValue("Content-Type").orElse("");
+        assertEquals("application/json; charset=UTF-8", contentTypeHeaderValue,
+                "Content-Type должен содержать формат данных и кодировку");
+
+        String body = resp.body().trim();
+        ErrorResponse errorResponse = gson.fromJson(body, ErrorResponse.class);
+
+        assertEquals("Некорректный параметр запроса — 'year'", errorResponse.getError(),
+                "В ответе должно быть сообщение об ошибке 'Некорректный параметр запроса — 'year''");
+    }
 }

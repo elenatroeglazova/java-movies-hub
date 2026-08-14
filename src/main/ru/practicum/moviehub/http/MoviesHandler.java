@@ -84,6 +84,9 @@ public class MoviesHandler extends BaseHttpHandler {
                     sendNoContent(ex);
                 }
             }
+        } else {
+            ErrorResponse err = new ErrorResponse("Неподдерживаемый метод");
+            sendJson(ex, 405, gson.toJson(err));
         }
     }
 
