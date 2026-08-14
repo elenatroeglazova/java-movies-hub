@@ -564,4 +564,26 @@ public class MoviesApiTest {
         assertEquals("Некорректный параметр запроса — 'year'", errorResponse.getError(),
                 "В ответе должно быть сообщение об ошибке 'Некорректный параметр запроса — 'year''");
     }
+
+    @Test
+    void putMovies_returnsMethodNotAllowedError() throws IOException, InterruptedException {
+        HttpRequest resReq = HttpRequest.newBuilder()
+                .uri(URI.create(BASE + "/movies"))
+                .PUT(HttpRequest.BodyPublishers.ofString(""))
+                .build();
+
+        HttpResponse<String> resp = client.send(resReq, HttpResponse.BodyHandlers.ofString(UTF_8));
+
+        assertEquals(405, resp.statusCode(), "GET /movies?year=YYYY должен вернуть 405");
+
+        String contentTypeHeaderValue = resp.headers().firstValue("Content-Type").orElse("");
+        assertEquals("application/json; charset=UTF-8", contentTypeHeaderValue,
+                "Content-Type должен содержать формат данных и кодировку");
+
+        String body = resp.body().trim();
+        ErrorResponse errorResponse = gson.fromJson(body, ErrorResponse.class);
+
+        assertEquals("Неподдерживаемый метод", errorResponse.getError(),
+                "В ответе должно быть сообщение об ошибке 'Неподдерживаемый метод'");
+    }
 }
