@@ -9,7 +9,9 @@ import ru.practicum.moviehub.store.MoviesStore;
 import java.io.IOException;
 import java.lang.reflect.Type;
 import java.util.Collections;
+import java.util.LinkedHashSet;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 public class MoviesHandler extends BaseHttpHandler {
     private final MoviesStore store;
@@ -24,11 +26,10 @@ public class MoviesHandler extends BaseHttpHandler {
         String method = ex.getRequestMethod();
         ex.getResponseHeaders().set("Content-Type", CT_JSON);
         if (method.equalsIgnoreCase("GET")) {
-            String path = ex.getRequestURI().getPath();
-            String[] pathComponents = path.split("/");
+            String[] pathComponents = ex.getRequestURI().getPath().split("/");
 
             if (pathComponents.length == 3) {
-                Optional<Integer> idOpt = getId(pathComponents[2]);
+                Optional<Integer> idOpt = getNumber(pathComponents[2]);
 
                 if (idOpt.isEmpty()) {
                     sendJson(ex, 400, gson.toJson(new ErrorResponse("Некорректный ID")));
@@ -39,6 +40,20 @@ public class MoviesHandler extends BaseHttpHandler {
                     } else {
                         sendJson(ex, 200, gson.toJson(movie));
                     }
+                }
+            } else if (ex.getRequestURI().getQuery() != null) {
+                String yearValue = ex.getRequestURI().getQuery().split("=")[1];
+                Optional<Integer> yearOpt = getNumber(yearValue);
+
+                if (yearOpt.isEmpty()) {
+                    ErrorResponse err = new ErrorResponse("Некорректный параметр запроса — 'year'");
+                    sendJson(ex, 400, gson.toJson(err));
+                } else {
+                    LinkedHashSet<Movie> resp = store.values().stream()
+                            .filter(film -> film.getYear() == yearOpt.get())
+                            .collect(Collectors.toCollection(LinkedHashSet::new));
+
+                    sendJson(ex, 200, gson.toJson(resp));
                 }
             } else {
                 String moviesJson = gson.toJson(store.values());
@@ -72,7 +87,7 @@ public class MoviesHandler extends BaseHttpHandler {
         } else if (method.equalsIgnoreCase("DELETE")) {
             String path = ex.getRequestURI().getPath();
             String[] pathComponents = path.split("/");
-            Optional<Integer> idOpt = getId(pathComponents[2]);
+            Optional<Integer> idOpt = getNumber(pathComponents[2]);
 
             if (idOpt.isEmpty()) {
                 sendJson(ex, 400, gson.toJson(new ErrorResponse("Некорректный ID")));

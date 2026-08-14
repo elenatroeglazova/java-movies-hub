@@ -43,9 +43,9 @@ public abstract class BaseHttpHandler implements HttpHandler {
         }
     }
 
-    protected Optional<Integer> getId(String idStr) {
+    protected Optional<Integer> getNumber(String numValue) {
         try {
-            Integer id = Integer.parseInt(idStr);
+            Integer id = Integer.parseInt(numValue);
             return Optional.of(id);
         } catch (NumberFormatException e) {
             return Optional.empty();
