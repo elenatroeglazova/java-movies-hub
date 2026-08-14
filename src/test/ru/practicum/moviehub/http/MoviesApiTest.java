@@ -23,7 +23,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.*;
 
 public class MoviesApiTest {
     private static final String BASE = "http://localhost:8080"; // !!! добавьте базовую часть URL
@@ -321,7 +321,7 @@ public class MoviesApiTest {
     }
 
     @Test
-    void getMoviesById_whenNotEmpty_returnsMovieById() throws IOException, InterruptedException {
+    void getMovieById_whenNotEmpty_returnsMovieById() throws IOException, InterruptedException {
         Movie movie1 = new Movie("Крестный отец", 1972);
         Movie movie2 = new Movie("Дюна", 2021);
         movies.put(1, movie1);
@@ -346,7 +346,7 @@ public class MoviesApiTest {
     }
 
     @Test
-    void getMoviesById_whenNotFound_returnsNotFoundError() throws IOException, InterruptedException {
+    void getMovieById_whenNotFound_returnsNotFoundError() throws IOException, InterruptedException {
         Movie movie1 = new Movie("Крестный отец", 1972);
         Movie movie2 = new Movie("Дюна", 2021);
         movies.put(1, movie1);
@@ -373,7 +373,7 @@ public class MoviesApiTest {
     }
 
     @Test
-    void getMoviesById_whenNotANumber_returnsBadRequestError() throws IOException, InterruptedException {
+    void getMovieById_whenNotANumber_returnsBadRequestError() throws IOException, InterruptedException {
         Movie movie1 = new Movie("Крестный отец", 1972);
         Movie movie2 = new Movie("Дюна", 2021);
         movies.put(1, movie1);
@@ -387,6 +387,88 @@ public class MoviesApiTest {
         HttpResponse<String> resp = client.send(resReq, HttpResponse.BodyHandlers.ofString(UTF_8));
 
         assertEquals(400, resp.statusCode(), "GET /movies/i должен вернуть 400");
+
+        String contentTypeHeaderValue = resp.headers().firstValue("Content-Type").orElse("");
+        assertEquals("application/json; charset=UTF-8", contentTypeHeaderValue,
+                "Content-Type должен содержать формат данных и кодировку");
+
+        String body = resp.body().trim();
+        ErrorResponse errorResponse = gson.fromJson(body, ErrorResponse.class);
+
+        assertEquals("Некорректный ID", errorResponse.getError(),
+                "В ответе должно быть сообщение об ошибке 'Некорректный ID'");
+    }
+
+    @Test
+    void deleteMovieById_whenNotEmpty_deletesMovieById() throws IOException, InterruptedException {
+        Movie movie1 = new Movie("Крестный отец", 1972);
+        Movie movie2 = new Movie("Дюна", 2021);
+        movies.put(1, movie1);
+        movies.put(2, movie2);
+
+        HttpRequest resReq = HttpRequest.newBuilder()
+                .uri(URI.create(BASE + "/movies/1"))
+                .DELETE()
+                .build();
+
+        HttpResponse<String> resp = client.send(resReq, HttpResponse.BodyHandlers.ofString(UTF_8));
+
+        assertEquals(204, resp.statusCode(), "DELETE /movies/1 должен вернуть 204");
+
+        String contentTypeHeaderValue = resp.headers().firstValue("Content-Type").orElse("");
+        assertEquals("application/json; charset=UTF-8", contentTypeHeaderValue,
+                "Content-Type должен содержать формат данных и кодировку");
+
+        String body = resp.body().trim();
+
+        assertTrue(body.isBlank(), "Тело ответа должно быть пустым");
+        assertNull(movies.get(1), "Фильм под id 1 должен быть удален из хранилища данных");
+        assertEquals(1, movies.size(), "Должен сохраниться только один фильм");
+        assertEquals(movie2, movies.get(2), "Остаться должен фильм с id 2");
+    }
+
+    @Test
+    void deleteMovieById_whenNotFound_returnsNotFoundError() throws IOException, InterruptedException {
+        Movie movie1 = new Movie("Крестный отец", 1972);
+        Movie movie2 = new Movie("Дюна", 2021);
+        movies.put(1, movie1);
+        movies.put(2, movie2);
+
+        HttpRequest resReq = HttpRequest.newBuilder()
+                .uri(URI.create(BASE + "/movies/3"))
+                .DELETE()
+                .build();
+
+        HttpResponse<String> resp = client.send(resReq, HttpResponse.BodyHandlers.ofString(UTF_8));
+
+        assertEquals(404, resp.statusCode(), "DELETE /movies/3 должен вернуть 404");
+
+        String contentTypeHeaderValue = resp.headers().firstValue("Content-Type").orElse("");
+        assertEquals("application/json; charset=UTF-8", contentTypeHeaderValue,
+                "Content-Type должен содержать формат данных и кодировку");
+
+        String body = resp.body().trim();
+        ErrorResponse errorResponse = gson.fromJson(body, ErrorResponse.class);
+
+        assertEquals("Фильм не найден", errorResponse.getError(),
+                "В ответе должно быть сообщение об ошибке 'Фильм не найден'");
+    }
+
+    @Test
+    void deleteMovieById_whenNotANumber_returnsBadRequestError() throws IOException, InterruptedException {
+        Movie movie1 = new Movie("Крестный отец", 1972);
+        Movie movie2 = new Movie("Дюна", 2021);
+        movies.put(1, movie1);
+        movies.put(2, movie2);
+
+        HttpRequest resReq = HttpRequest.newBuilder()
+                .uri(URI.create(BASE + "/movies/i"))
+                .DELETE()
+                .build();
+
+        HttpResponse<String> resp = client.send(resReq, HttpResponse.BodyHandlers.ofString(UTF_8));
+
+        assertEquals(400, resp.statusCode(), "DELETE /movies/i должен вернуть 400");
 
         String contentTypeHeaderValue = resp.headers().firstValue("Content-Type").orElse("");
         assertEquals("application/json; charset=UTF-8", contentTypeHeaderValue,
