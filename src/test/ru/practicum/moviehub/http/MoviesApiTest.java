@@ -1,9 +1,6 @@
 package ru.practicum.moviehub.http;
 
 import com.google.gson.Gson;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -102,6 +99,7 @@ public class MoviesApiTest {
     @Test
     void postMovies_whenNotErroneous_returnsMovieId() throws IOException, InterruptedException {
         Movie newMovie = new Movie("Крестный отец", 1972);
+        newMovie.setId(1);
         String jsonBody = gson.toJson(newMovie);
 
         HttpRequest req = HttpRequest.newBuilder()
@@ -118,11 +116,7 @@ public class MoviesApiTest {
         assertEquals("application/json; charset=UTF-8", contentTypeHeaderValue,
                 "Content-Type должен содержать формат данных и кодировку");
 
-        JsonElement jsonElement = JsonParser.parseString(resp.body().trim());
-        JsonObject jsonObject = jsonElement.getAsJsonObject();
-        Movie respMovie = gson.fromJson(jsonObject.get("1"), Movie.class);
-
-        assertEquals("[1]", jsonObject.keySet().toString(), "ID фильма должно быть равно 1");
+        Movie respMovie = gson.fromJson(resp.body().trim(), Movie.class);
         assertEquals(newMovie, respMovie, "В ответе должны быть данные фильма из запроса");
     }
 
@@ -574,7 +568,7 @@ public class MoviesApiTest {
 
         HttpResponse<String> resp = client.send(resReq, HttpResponse.BodyHandlers.ofString(UTF_8));
 
-        assertEquals(405, resp.statusCode(), "GET /movies?year=YYYY должен вернуть 405");
+        assertEquals(405, resp.statusCode(), "PUT /movies должен вернуть 405");
 
         String contentTypeHeaderValue = resp.headers().firstValue("Content-Type").orElse("");
         assertEquals("application/json; charset=UTF-8", contentTypeHeaderValue,

@@ -5,6 +5,7 @@ import java.util.Objects;
 public class Movie {
     private String title;
     private int year;
+    private int id;
 
     public Movie(String title, int year) {
         this.title = title;
@@ -17,6 +18,14 @@ public class Movie {
 
     public int getYear() {
         return year;
+    }
+
+    public int getId() {
+        return id;
+    }
+
+    public void setId(int id) {
+        this.id = id;
     }
 
     public void setTitle(String title) {
@@ -32,11 +41,13 @@ public class Movie {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         Movie movie = (Movie) o;
-        return getYear() == movie.getYear() && Objects.equals(getTitle(), movie.getTitle());
+        return getYear() == movie.getYear() &&
+                Objects.equals(getTitle(), movie.getTitle()) &&
+                getId() == movie.getId();
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(getTitle(), getYear());
+        return Objects.hash(getTitle(), getYear(), getId());
     }
 }

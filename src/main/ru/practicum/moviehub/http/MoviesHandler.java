@@ -8,14 +8,18 @@ import ru.practicum.moviehub.store.MoviesStore;
 
 import java.io.IOException;
 import java.lang.reflect.Type;
-import java.util.Collections;
+import java.net.URLDecoder;
+import java.time.LocalDate;
 import java.util.LinkedHashSet;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
+import static java.nio.charset.StandardCharsets.UTF_8;
+
 public class MoviesHandler extends BaseHttpHandler {
     private final MoviesStore store;
-    private Movie newMovie;
+    private static final int FIRST_FILM_YEAR = 1888;
+    private static final int CURRENT_YEAR = LocalDate.now().getYear();
 
     public MoviesHandler(MoviesStore store) {
         this.store = store;
@@ -28,7 +32,7 @@ public class MoviesHandler extends BaseHttpHandler {
         if (method.equalsIgnoreCase("GET")) {
             String[] pathComponents = ex.getRequestURI().getPath().split("/");
 
-            if (pathComponents.length == 3) {
+            if (pathComponents.length >= 3) {
                 Optional<Integer> idOpt = getNumber(pathComponents[2]);
 
                 if (idOpt.isEmpty()) {
@@ -42,7 +46,8 @@ public class MoviesHandler extends BaseHttpHandler {
                     }
                 }
             } else if (ex.getRequestURI().getQuery() != null) {
-                String yearValue = ex.getRequestURI().getQuery().split("=")[1];
+                String query = URLDecoder.decode(ex.getRequestURI().getQuery(), UTF_8).trim();
+                String yearValue = query.split("=")[1];
                 Optional<Integer> yearOpt = getNumber(yearValue);
 
                 if (yearOpt.isEmpty()) {
@@ -72,17 +77,15 @@ public class MoviesHandler extends BaseHttpHandler {
             if (movieOpt.isEmpty()) {
                 sendJson(ex, 422, gson.toJson(new ErrorResponse("Ошибка в синтаксисе JSON")));
             } else {
-                newMovie = movieOpt.get();
-            }
+                Movie newMovie = movieOpt.get();
+                ErrorResponse errResp = checkValidationErrors(newMovie);
 
-            ErrorResponse errResp = checkValidationErrors();
-
-            if (errResp.getDetails().isEmpty()) {
-                store.put(store.size() + 1, newMovie);
-                sendJson(ex, 201, gson.toJson(
-                        Collections.singletonMap(store.lastEntry().getKey(), store.lastEntry().getValue())));
-            } else {
-                sendJson(ex, 422, gson.toJson(errResp));
+                if (errResp.getDetails().isEmpty()) {
+                    store.put(store.size() + 1, newMovie);
+                    sendJson(ex, 201, gson.toJson(newMovie));
+                } else {
+                    sendJson(ex, 422, gson.toJson(errResp));
+                }
             }
         } else if (method.equalsIgnoreCase("DELETE")) {
             String path = ex.getRequestURI().getPath();
@@ -105,18 +108,18 @@ public class MoviesHandler extends BaseHttpHandler {
         }
     }
 
-    private ErrorResponse checkValidationErrors() {
+    private ErrorResponse checkValidationErrors(Movie newMovie) {
         ErrorResponse errResp = new ErrorResponse("Ошибка валидации");
         String movieTitle = newMovie.getTitle();
         int movieYear = newMovie.getYear();
 
-        if (movieTitle.length() > 100) {
-            errResp.getDetails().add("максимальная длина наименования - 100 знаков");
-        } else if (movieTitle.isBlank()) {
+        if (movieTitle == null || movieTitle.isBlank()) {
             errResp.getDetails().add("название не должно быть пустым");
+        } else if (movieTitle.length() > 100) {
+            errResp.getDetails().add("максимальная длина наименования - 100 знаков");
         }
 
-        if (movieYear > 2026 || movieYear < 1888) {
+        if (movieYear > CURRENT_YEAR || movieYear < FIRST_FILM_YEAR) {
             errResp.getDetails().add("год должен быть между 1888 и 2026");
         }
         return errResp;
